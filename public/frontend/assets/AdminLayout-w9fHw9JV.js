@@ -1,0 +1,1 @@
+import{d as e,s as t,y as n,z as r}from"./runtime-core.esm-bundler-B8vw96nN.js";import{t as i}from"./vue-router-Eph8u6gw.js";var a={__name:`AdminLayout`,setup(a){return(a,o)=>(n(),t(`div`,null,[e(r(i))]))}};export{a as default};

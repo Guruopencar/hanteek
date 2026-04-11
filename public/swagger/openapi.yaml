@@ -1,0 +1,1606 @@
+openapi: 3.0.3
+info:
+  title: Hunteek 2.0 API
+  description: |
+    IT Marketplace Platform API
+    
+    ## Авторизація
+    Використовується Bearer токен (Laravel Sanctum).
+    Після логіну отримайте токен і додавайте до всіх захищених запитів:
+    `Authorization: Bearer {token}`
+    
+    ## Мова
+    Передавайте заголовок `Accept-Language: uk` або `Accept-Language: en`
+    
+    ## Формат відповідей
+    Всі відповіді мають структуру:
+    ```json
+    { "success": true, "message": "OK", "data": {...} }
+    ```
+    Помилки:
+    ```json
+    { "success": false, "message": "Error", "errors": {} }
+    ```
+  version: 1.0.0
+  contact:
+    email: admin@hunteek.com
+
+servers:
+  - url: https://hanteek.majorschool.org.ua/api/v1
+    description: Production server
+
+security:
+  - bearerAuth: []
+
+# ══════════════════════════════════════════════════════════════
+# COMPONENTS
+# ══════════════════════════════════════════════════════════════
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+
+    # ── Success Response ──────────────────────────────────────
+    SuccessResponse:
+      type: object
+      properties:
+        success: { type: boolean, example: true }
+        message: { type: string, example: OK }
+        data:    { type: object }
+
+    ErrorResponse:
+      type: object
+      properties:
+        success: { type: boolean, example: false }
+        message: { type: string, example: Помилка валідації }
+        errors:  { type: object }
+
+    PaginationMeta:
+      type: object
+      properties:
+        current_page: { type: integer, example: 1 }
+        last_page:    { type: integer, example: 5 }
+        per_page:     { type: integer, example: 12 }
+        total:        { type: integer, example: 58 }
+
+    # ── User ──────────────────────────────────────────────────
+    User:
+      type: object
+      properties:
+        id:             { type: integer, example: 1 }
+        name:           { type: string,  example: John Doe }
+        email:          { type: string,  example: john@example.com }
+        phone:          { type: string,  example: "+380991234567", nullable: true }
+        role:           { type: string,  enum: [programmer, project_owner, super_admin] }
+        active_profile: { type: string,  enum: [programmer, recruiter], nullable: true }
+        locale:         { type: string,  example: uk }
+        is_verified:    { type: boolean, example: true }
+        is_active:      { type: boolean, example: true }
+        referral_code:  { type: string,  example: ABC12345 }
+        last_login_at:  { type: string,  format: date-time, nullable: true }
+        created_at:     { type: string,  format: date-time }
+        profile:
+          type: object
+          nullable: true
+          properties:
+            first_name:      { type: string,  example: John }
+            last_name:       { type: string,  example: Doe }
+            full_name:       { type: string,  example: John Doe }
+            avatar:          { type: string,  nullable: true }
+            bio:             { type: string,  nullable: true }
+            country:         { type: string,  example: Ukraine }
+            city:            { type: string,  example: Lviv }
+            location:        { type: string,  example: "Ukraine, Lviv" }
+            telegram:        { type: string,  nullable: true }
+            linkedin:        { type: string,  nullable: true }
+            github:          { type: string,  nullable: true }
+            website:         { type: string,  nullable: true }
+            average_rating:  { type: number,  example: 4.8 }
+            reviews_count:   { type: integer, example: 12 }
+            contracts_count: { type: integer, example: 5 }
+        wallet:
+          type: object
+          nullable: true
+          properties:
+            balance:           { type: number, example: 250.00 }
+            frozen:            { type: number, example: 0.00 }
+            available_balance: { type: number, example: 250.00 }
+            currency:          { type: string, example: USD }
+
+    # ── Resume ────────────────────────────────────────────────
+    Resume:
+      type: object
+      properties:
+        id:               { type: integer }
+        position:         { type: string,  example: "Middle Front-end Developer (Vue)" }
+        experience_years: { type: integer, example: 3 }
+        work_type:        { type: string,  enum: [remote, office, hybrid] }
+        employment_type:  { type: string,  enum: [full_time, part_time, freelance] }
+        hourly_rate:      { type: number,  example: 35.00, nullable: true }
+        fixed_rate:       { type: number,  example: 1500.00, nullable: true }
+        rate_currency:    { type: string,  example: USD }
+        skills:
+          type: array
+          items: { type: string }
+          example: [Vue.js, Laravel, MySQL]
+        description:      { type: string,  nullable: true }
+        portfolio_url:    { type: string,  nullable: true }
+        is_published:     { type: boolean, example: true }
+
+    # ── Vacancy ───────────────────────────────────────────────
+    Vacancy:
+      type: object
+      properties:
+        id:                  { type: integer }
+        project_id:          { type: integer }
+        title:               { type: string,  example: "Need a specialist who works in Vue.js" }
+        description:         { type: string }
+        requirements:        { type: string,  nullable: true }
+        work_type:           { type: string,  enum: [remote, office, hybrid] }
+        location:            { type: string,  example: Kyiv, nullable: true }
+        contract_type:       { type: string,  enum: [fixed_price, time_material] }
+        budget:              { type: number,  example: 784.00, nullable: true }
+        hourly_rate:         { type: number,  example: 35.00, nullable: true }
+        estimated_hours:     { type: integer, example: 99, nullable: true }
+        currency:            { type: string,  example: USD }
+        skills_required:
+          type: array
+          items: { type: string }
+        status:              { type: string,  enum: [draft, published, in_progress, completed, archived] }
+        applications_count:  { type: integer, example: 12 }
+        views_count:         { type: integer, example: 198 }
+        published_at:        { type: string,  format: date-time, nullable: true }
+        created_at:          { type: string,  format: date-time }
+        owner:
+          type: object
+          nullable: true
+          properties:
+            id:             { type: integer }
+            full_name:      { type: string }
+            avatar:         { type: string, nullable: true }
+            average_rating: { type: number }
+            reviews_count:  { type: integer }
+
+    # ── Contract ──────────────────────────────────────────────
+    Contract:
+      type: object
+      properties:
+        id:                   { type: integer }
+        type:                 { type: string, enum: [vacancy, resume, agreement] }
+        title:                { type: string, example: "Development of CRM module" }
+        description:          { type: string, nullable: true }
+        contract_type:        { type: string, enum: [fixed_price, time_material] }
+        total_amount:         { type: number, example: 1500.00, nullable: true }
+        hourly_rate:          { type: number, example: 35.00, nullable: true }
+        estimated_hours:      { type: integer, example: 40, nullable: true }
+        currency:             { type: string, example: USD }
+        status:               { type: string, enum: [draft, pending_signature, active, completed, cancelled, archived] }
+        is_signed_by_owner:   { type: boolean }
+        is_signed_by_dev:     { type: boolean }
+        is_fully_signed:      { type: boolean }
+        can_leave_review:     { type: boolean }
+        total_logged_hours:   { type: number, example: 12.5 }
+        owner_signed_at:      { type: string, format: date-time, nullable: true }
+        developer_signed_at:  { type: string, format: date-time, nullable: true }
+        started_at:           { type: string, format: date-time, nullable: true }
+        deadline_at:          { type: string, format: date-time, nullable: true }
+        completed_at:         { type: string, format: date-time, nullable: true }
+        created_at:           { type: string, format: date-time }
+
+    # ── Task ──────────────────────────────────────────────────
+    Task:
+      type: object
+      properties:
+        id:              { type: integer }
+        contract_id:     { type: integer }
+        title:           { type: string, example: "Implement auth module" }
+        description:     { type: string, nullable: true }
+        priority:        { type: string, enum: [low, medium, high, critical] }
+        status:          { type: string, enum: [todo, in_progress, review, done, cancelled] }
+        due_date:        { type: string, format: date, nullable: true }
+        estimated_hours: { type: number, nullable: true }
+        sort_order:      { type: integer }
+        is_overdue:      { type: boolean }
+        completed_at:    { type: string, format: date-time, nullable: true }
+        created_at:      { type: string, format: date-time }
+
+    # ── Review ────────────────────────────────────────────────
+    Review:
+      type: object
+      properties:
+        id:           { type: integer }
+        contract_id:  { type: integer }
+        rating:       { type: integer, minimum: 1, maximum: 5, example: 5 }
+        comment:      { type: string, example: "Чудовий спеціаліст, рекомендую!" }
+        status:       { type: string, enum: [pending, published, hidden, deleted] }
+        is_published: { type: boolean }
+        published_at: { type: string, format: date-time, nullable: true }
+        created_at:   { type: string, format: date-time }
+        reviewer:
+          type: object
+          nullable: true
+          properties:
+            id:        { type: integer }
+            full_name: { type: string }
+            avatar:    { type: string, nullable: true }
+            role:      { type: string }
+
+    # ── Transaction ───────────────────────────────────────────
+    Transaction:
+      type: object
+      properties:
+        id:             { type: integer }
+        uuid:           { type: string, format: uuid }
+        type:           { type: string, enum: [deposit, withdrawal, transfer, payment, commission, refund, bonus] }
+        amount:         { type: number, example: 100.00 }
+        commission:     { type: number, example: 5.00 }
+        net_amount:     { type: number, example: 95.00 }
+        currency:       { type: string, example: USD }
+        status:         { type: string, enum: [pending, processing, completed, failed, cancelled, refunded] }
+        description:    { type: string, nullable: true }
+        payment_method: { type: string, nullable: true }
+        processed_at:   { type: string, format: date-time, nullable: true }
+        created_at:     { type: string, format: date-time }
+
+    # ── Message ───────────────────────────────────────────────
+    Message:
+      type: object
+      properties:
+        id:              { type: integer }
+        conversation_id: { type: integer }
+        sender_id:       { type: integer }
+        type:            { type: string, enum: [text, file, image, system] }
+        content:         { type: string }
+        file_url:        { type: string, nullable: true }
+        is_read:         { type: boolean }
+        read_at:         { type: string, format: date-time, nullable: true }
+        created_at:      { type: string, format: date-time }
+
+# ══════════════════════════════════════════════════════════════
+# PATHS
+# ══════════════════════════════════════════════════════════════
+paths:
+
+  # ────────────────────────────────────────────────────────────
+  # AUTH
+  # ────────────────────────────────────────────────────────────
+
+  /auth/register:
+    post:
+      tags: [Auth]
+      summary: Реєстрація нового користувача
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, email, password, password_confirmation, role]
+              properties:
+                name:                  { type: string, example: "John Doe" }
+                email:                 { type: string, format: email, example: "john@example.com" }
+                password:              { type: string, minLength: 8, example: "Test@12345" }
+                password_confirmation: { type: string, example: "Test@12345" }
+                role:                  { type: string, enum: [programmer, project_owner] }
+                phone:                 { type: string, example: "+380991234567" }
+                locale:                { type: string, enum: [uk, en], default: uk }
+                referral_code:         { type: string, example: "ABC12345" }
+      responses:
+        '201':
+          description: Успішна реєстрація
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean, example: true }
+                  message: { type: string, example: "Реєстрація успішна" }
+                  data:
+                    type: object
+                    properties:
+                      token: { type: string, example: "1|abcdef..." }
+                      user:  { $ref: '#/components/schemas/User' }
+        '422':
+          description: Помилка валідації
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Вхід в систему
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:    { type: string, format: email, example: "john@example.com" }
+                password: { type: string, example: "Test@12345" }
+      responses:
+        '200':
+          description: Успішний вхід
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data:
+                    type: object
+                    properties:
+                      token: { type: string }
+                      user:  { $ref: '#/components/schemas/User' }
+        '401':
+          description: Невірні дані
+
+  /auth/logout:
+    post:
+      tags: [Auth]
+      summary: Вихід з системи
+      responses:
+        '200':
+          description: Вихід успішний
+
+  /auth/me:
+    get:
+      tags: [Auth]
+      summary: Поточний авторизований користувач
+      responses:
+        '200':
+          description: Дані користувача
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data:    { $ref: '#/components/schemas/User' }
+
+  /auth/refresh:
+    post:
+      tags: [Auth]
+      summary: Оновити токен
+      responses:
+        '200':
+          description: Новий токен
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      token: { type: string }
+
+  /auth/switch-profile:
+    post:
+      tags: [Auth]
+      summary: Перемкнути активний профіль (тільки project_owner)
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [profile]
+              properties:
+                profile: { type: string, enum: [programmer, recruiter] }
+      responses:
+        '200':
+          description: Профіль змінено
+
+  /auth/forgot-password:
+    post:
+      tags: [Auth]
+      summary: Запит на скидання пароля
+      security: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email: { type: string, format: email }
+      responses:
+        '200':
+          description: Код надіслано
+
+  /auth/reset-password:
+    post:
+      tags: [Auth]
+      summary: Скинути пароль
+      security: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, code, password, password_confirmation]
+              properties:
+                email:                 { type: string, format: email }
+                code:                  { type: string, example: "123456" }
+                password:              { type: string, minLength: 8 }
+                password_confirmation: { type: string }
+      responses:
+        '200':
+          description: Пароль змінено
+
+  /auth/verify-code:
+    post:
+      tags: [Auth]
+      summary: Підтвердити код верифікації
+      security: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, code, type]
+              properties:
+                email: { type: string, format: email }
+                code:  { type: string, example: "123456" }
+                type:  { type: string, enum: [email, phone] }
+      responses:
+        '200':
+          description: Акаунт підтверджено
+
+  /auth/resend-code:
+    post:
+      tags: [Auth]
+      summary: Повторно надіслати код підтвердження
+      security: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, type]
+              properties:
+                email: { type: string, format: email }
+                type:  { type: string, enum: [email, phone] }
+      responses:
+        '200':
+          description: Код надіслано
+
+  /auth/push-token:
+    post:
+      tags: [Auth]
+      summary: Зберегти FCM push токен (для Flutter)
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token, platform]
+              properties:
+                token:    { type: string }
+                platform: { type: string, enum: [ios, android, web] }
+      responses:
+        '200':
+          description: Токен збережено
+
+  # ────────────────────────────────────────────────────────────
+  # PUBLIC
+  # ────────────────────────────────────────────────────────────
+
+  /locales:
+    get:
+      tags: [Public]
+      summary: Список доступних мов
+      security: []
+      responses:
+        '200':
+          description: Список мов
+
+  /translations/{locale}:
+    get:
+      tags: [Public]
+      summary: Всі переклади для мови
+      security: []
+      parameters:
+        - name: locale
+          in: path
+          required: true
+          schema: { type: string, enum: [uk, en] }
+      responses:
+        '200':
+          description: Об'єкт з перекладами згрупованими по групах
+
+  /settings/public:
+    get:
+      tags: [Public]
+      summary: Публічні налаштування платформи
+      security: []
+      responses:
+        '200':
+          description: Налаштування
+
+  /rating:
+    get:
+      tags: [Public]
+      summary: Рейтинг користувачів
+      security: []
+      parameters:
+        - name: role
+          in: query
+          schema: { type: string, enum: [programmer, project_owner] }
+        - name: sort_by
+          in: query
+          schema: { type: string, enum: [average_rating, reviews_count, contracts_count] }
+        - name: page
+          in: query
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Список користувачів з рейтингом
+
+  /news:
+    get:
+      tags: [Public]
+      summary: Список новин
+      security: []
+      parameters:
+        - name: page
+          in: query
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Список новин
+
+  /news/{slug}:
+    get:
+      tags: [Public]
+      summary: Деталі новини
+      security: []
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Деталі новини
+
+  # ────────────────────────────────────────────────────────────
+  # PROFILE
+  # ────────────────────────────────────────────────────────────
+
+  /profile:
+    get:
+      tags: [Profile]
+      summary: Мій профіль
+      responses:
+        '200':
+          description: Дані профілю
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/User' }
+    put:
+      tags: [Profile]
+      summary: Оновити профіль
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                first_name: { type: string }
+                last_name:  { type: string }
+                bio:        { type: string }
+                country:    { type: string }
+                city:       { type: string }
+                telegram:   { type: string }
+                linkedin:   { type: string, format: uri }
+                github:     { type: string, format: uri }
+                website:    { type: string, format: uri }
+                locale:     { type: string, enum: [uk, en] }
+      responses:
+        '200':
+          description: Профіль оновлено
+
+  /profile/avatar:
+    post:
+      tags: [Profile]
+      summary: Завантажити аватар
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                avatar:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: Аватар завантажено
+
+  /profile/ban-list:
+    get:
+      tags: [Profile]
+      summary: Список заблокованих користувачів
+      responses:
+        '200':
+          description: Список банів
+
+  /profile/ban/{user}:
+    post:
+      tags: [Profile]
+      summary: Заблокувати користувача
+      parameters:
+        - name: user
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason: { type: string }
+      responses:
+        '200':
+          description: Користувача заблоковано
+    delete:
+      tags: [Profile]
+      summary: Розблокувати користувача
+      parameters:
+        - name: user
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Розблоковано
+
+  # ────────────────────────────────────────────────────────────
+  # RESUME
+  # ────────────────────────────────────────────────────────────
+
+  /resume:
+    get:
+      tags: [Resume]
+      summary: Моє резюме
+      responses:
+        '200':
+          description: Резюме
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/Resume' }
+    post:
+      tags: [Resume]
+      summary: Створити резюме
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [position]
+              properties:
+                position:         { type: string, example: "Middle Vue.js Developer" }
+                experience_years: { type: integer, example: 3 }
+                work_type:        { type: string, enum: [remote, office, hybrid] }
+                employment_type:  { type: string, enum: [full_time, part_time, freelance] }
+                hourly_rate:      { type: number, example: 35 }
+                fixed_rate:       { type: number }
+                rate_currency:    { type: string, example: USD }
+                skills:
+                  type: array
+                  items: { type: string }
+                  example: [Vue.js, Laravel, MySQL]
+                description:      { type: string }
+                portfolio_url:    { type: string, format: uri }
+      responses:
+        '201':
+          description: Резюме створено
+    put:
+      tags: [Resume]
+      summary: Оновити резюме
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                position:         { type: string }
+                experience_years: { type: integer }
+                work_type:        { type: string, enum: [remote, office, hybrid] }
+                hourly_rate:      { type: number }
+                skills:           { type: array, items: { type: string } }
+                description:      { type: string }
+      responses:
+        '200':
+          description: Оновлено
+
+  /resume/publish:
+    post:
+      tags: [Resume]
+      summary: Опублікувати резюме
+      responses:
+        '200':
+          description: Опубліковано
+
+  /resume/unpublish:
+    post:
+      tags: [Resume]
+      summary: Приховати резюме
+      responses:
+        '200':
+          description: Приховано
+
+  /resume/experience:
+    post:
+      tags: [Resume]
+      summary: Додати досвід роботи
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [company, position, started_at]
+              properties:
+                company:     { type: string, example: "Google LLC" }
+                position:    { type: string, example: "Frontend Developer" }
+                description: { type: string }
+                started_at:  { type: string, format: date, example: "2021-03-01" }
+                ended_at:    { type: string, format: date, nullable: true }
+                is_current:  { type: boolean, default: false }
+      responses:
+        '201':
+          description: Досвід додано
+
+  # ────────────────────────────────────────────────────────────
+  # FEED
+  # ────────────────────────────────────────────────────────────
+
+  /feed/vacancies:
+    get:
+      tags: [Feed]
+      summary: Стрічка вакансій (для Programmer)
+      parameters:
+        - name: work_type
+          in: query
+          schema: { type: string, enum: [remote, office, hybrid] }
+        - name: contract_type
+          in: query
+          schema: { type: string, enum: [fixed_price, time_material] }
+        - name: location
+          in: query
+          schema: { type: string, example: Kyiv }
+        - name: min_budget
+          in: query
+          schema: { type: number }
+        - name: search
+          in: query
+          schema: { type: string }
+        - name: page
+          in: query
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Список вакансій
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/Vacancy' }
+                  meta: { $ref: '#/components/schemas/PaginationMeta' }
+
+  /feed/resumes:
+    get:
+      tags: [Feed]
+      summary: Стрічка резюме (для Project Owner)
+      parameters:
+        - name: work_type
+          in: query
+          schema: { type: string, enum: [remote, office, hybrid] }
+        - name: employment_type
+          in: query
+          schema: { type: string, enum: [full_time, part_time, freelance] }
+        - name: min_rate
+          in: query
+          schema: { type: number }
+        - name: search
+          in: query
+          schema: { type: string }
+        - name: page
+          in: query
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Список резюме
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/Resume' }
+                  meta: { $ref: '#/components/schemas/PaginationMeta' }
+
+  # ────────────────────────────────────────────────────────────
+  # PROJECTS
+  # ────────────────────────────────────────────────────────────
+
+  /projects:
+    get:
+      tags: [Projects]
+      summary: Мої проекти
+      parameters:
+        - name: status
+          in: query
+          schema: { type: string, enum: [active, archived, draft] }
+      responses:
+        '200':
+          description: Список проектів
+    post:
+      tags: [Projects]
+      summary: Створити проект
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title]
+              properties:
+                title:        { type: string, example: "E-commerce Platform" }
+                description:  { type: string }
+                cover_image:  { type: string, format: uri }
+                cover_color:  { type: string, example: "#4F46E5" }
+      responses:
+        '201':
+          description: Проект створено
+
+  /projects/{project}:
+    get:
+      tags: [Projects]
+      summary: Деталі проекту
+      parameters:
+        - name: project
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Деталі
+    put:
+      tags: [Projects]
+      summary: Оновити проект
+      parameters:
+        - name: project
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:       { type: string }
+                description: { type: string }
+                cover_image: { type: string, format: uri }
+                cover_color: { type: string }
+      responses:
+        '200':
+          description: Оновлено
+    delete:
+      tags: [Projects]
+      summary: Видалити проект
+      parameters:
+        - name: project
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Видалено
+
+  /projects/{project}/archive:
+    post:
+      tags: [Projects]
+      summary: Архівувати проект
+      parameters:
+        - name: project
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Архівовано
+
+  # ────────────────────────────────────────────────────────────
+  # VACANCIES
+  # ────────────────────────────────────────────────────────────
+
+  /projects/{project}/vacancies:
+    get:
+      tags: [Vacancies]
+      summary: Вакансії проекту
+      parameters:
+        - name: project
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Список вакансій
+    post:
+      tags: [Vacancies]
+      summary: Створити вакансію
+      parameters:
+        - name: project
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title, description, work_type, contract_type]
+              properties:
+                title:            { type: string }
+                description:      { type: string }
+                requirements:     { type: string }
+                work_type:        { type: string, enum: [remote, office, hybrid] }
+                location:         { type: string }
+                contract_type:    { type: string, enum: [fixed_price, time_material] }
+                budget:           { type: number }
+                hourly_rate:      { type: number }
+                estimated_hours:  { type: integer }
+                currency:         { type: string, default: USD }
+                skills_required:  { type: array, items: { type: string } }
+      responses:
+        '201':
+          description: Вакансію створено
+
+  /projects/{project}/vacancies/{vacancy}/publish:
+    post:
+      tags: [Vacancies]
+      summary: Опублікувати вакансію
+      parameters:
+        - name: project
+          in: path
+          required: true
+          schema: { type: integer }
+        - name: vacancy
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Опубліковано
+
+  /vacancies/{vacancy}/apply:
+    post:
+      tags: [Vacancies]
+      summary: Подати заявку на вакансію
+      parameters:
+        - name: vacancy
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                cover_letter:  { type: string }
+                proposed_rate: { type: number }
+      responses:
+        '201':
+          description: Заявку надіслано
+
+  /my-applications:
+    get:
+      tags: [Vacancies]
+      summary: Мої заявки (для Programmer)
+      responses:
+        '200':
+          description: Список заявок
+
+  # ────────────────────────────────────────────────────────────
+  # CONTRACTS
+  # ────────────────────────────────────────────────────────────
+
+  /contracts:
+    get:
+      tags: [Contracts]
+      summary: Мої контракти
+      parameters:
+        - name: status
+          in: query
+          schema: { type: string, enum: [draft, pending_signature, active, completed, cancelled, archived] }
+        - name: page
+          in: query
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Список контрактів
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/Contract' }
+                  meta: { $ref: '#/components/schemas/PaginationMeta' }
+    post:
+      tags: [Contracts]
+      summary: Створити контракт
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [developer_id, type, title, contract_type]
+              properties:
+                developer_id:    { type: integer, example: 5 }
+                vacancy_id:      { type: integer, nullable: true }
+                type:            { type: string, enum: [vacancy, resume, agreement] }
+                title:           { type: string, example: "Development of landing page" }
+                description:     { type: string }
+                contract_type:   { type: string, enum: [fixed_price, time_material] }
+                total_amount:    { type: number, example: 800 }
+                hourly_rate:     { type: number }
+                estimated_hours: { type: integer }
+                currency:        { type: string, default: USD }
+                deadline_at:     { type: string, format: date }
+      responses:
+        '201':
+          description: Контракт створено
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/Contract' }
+
+  /contracts/{contract}:
+    get:
+      tags: [Contracts]
+      summary: Деталі контракту
+      parameters:
+        - name: contract
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Деталі контракту
+
+  /contracts/{contract}/sign:
+    post:
+      tags: [Contracts]
+      summary: Підписати контракт
+      parameters:
+        - name: contract
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Контракт підписано
+
+  /contracts/{contract}/complete:
+    post:
+      tags: [Contracts]
+      summary: Завершити контракт (тільки owner)
+      parameters:
+        - name: contract
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Контракт завершено
+
+  # ────────────────────────────────────────────────────────────
+  # TASKS
+  # ────────────────────────────────────────────────────────────
+
+  /contracts/{contract}/tasks:
+    get:
+      tags: [Tasks]
+      summary: Задачі контракту
+      parameters:
+        - name: contract
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Список задач
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/Task' }
+    post:
+      tags: [Tasks]
+      summary: Створити задачу
+      parameters:
+        - name: contract
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title]
+              properties:
+                title:           { type: string, example: "Implement login page" }
+                description:     { type: string }
+                priority:        { type: string, enum: [low, medium, high, critical], default: medium }
+                assigned_to:     { type: integer, nullable: true }
+                due_date:        { type: string, format: date }
+                estimated_hours: { type: number }
+      responses:
+        '201':
+          description: Задачу створено
+
+  /contracts/{contract}/tasks/{task}/done:
+    post:
+      tags: [Tasks]
+      summary: Позначити задачу як виконану
+      parameters:
+        - name: contract
+          in: path
+          required: true
+          schema: { type: integer }
+        - name: task
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Виконано
+
+  # ────────────────────────────────────────────────────────────
+  # WALLET
+  # ────────────────────────────────────────────────────────────
+
+  /wallet:
+    get:
+      tags: [Wallet]
+      summary: Мій гаманець
+      responses:
+        '200':
+          description: Баланс і рахунки
+
+  /wallet/deposit:
+    post:
+      tags: [Wallet]
+      summary: Поповнити рахунок
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [amount, payment_method]
+              properties:
+                amount:         { type: number, minimum: 5, example: 100 }
+                payment_method: { type: string, example: "card" }
+                account_id:     { type: integer, nullable: true }
+      responses:
+        '201':
+          description: Поповнено
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/Transaction' }
+
+  /wallet/withdraw:
+    post:
+      tags: [Wallet]
+      summary: Вивести кошти
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [amount, requisites]
+              properties:
+                amount:
+                  type: number
+                  minimum: 10
+                  example: 50
+                requisites:
+                  type: object
+                  example: { card: "4444333322221111", name: "John Doe" }
+      responses:
+        '200':
+          description: Запит на виведення створено
+
+  /wallet/transfer:
+    post:
+      tags: [Wallet]
+      summary: Переказ між рахунками
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [amount, from_account_id, to_account_id]
+              properties:
+                amount:          { type: number, minimum: 1 }
+                from_account_id: { type: integer }
+                to_account_id:   { type: integer }
+      responses:
+        '200':
+          description: Переказ виконано
+
+  /wallet/transactions:
+    get:
+      tags: [Wallet]
+      summary: Каталог операцій
+      parameters:
+        - name: type
+          in: query
+          schema: { type: string, enum: [deposit, withdrawal, transfer, payment, commission, refund, bonus] }
+        - name: status
+          in: query
+          schema: { type: string, enum: [pending, completed, failed] }
+        - name: from
+          in: query
+          schema: { type: string, format: date }
+        - name: to
+          in: query
+          schema: { type: string, format: date }
+        - name: page
+          in: query
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Список транзакцій
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/Transaction' }
+                  meta: { $ref: '#/components/schemas/PaginationMeta' }
+
+  # ────────────────────────────────────────────────────────────
+  # REVIEWS
+  # ────────────────────────────────────────────────────────────
+
+  /reviews:
+    get:
+      tags: [Reviews]
+      summary: Відгуки про мене
+      responses:
+        '200':
+          description: Список відгуків
+    post:
+      tags: [Reviews]
+      summary: Залишити відгук
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [contract_id, rating, comment]
+              properties:
+                contract_id: { type: integer }
+                rating:      { type: integer, minimum: 1, maximum: 5, example: 5 }
+                comment:     { type: string, minLength: 20, example: "Чудовий спеціаліст!" }
+      responses:
+        '201':
+          description: Відгук надіслано
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/Review' }
+
+  /reviews/user/{user}:
+    get:
+      tags: [Reviews]
+      summary: Відгуки конкретного користувача
+      parameters:
+        - name: user
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Список відгуків
+
+  # ────────────────────────────────────────────────────────────
+  # MESSAGES
+  # ────────────────────────────────────────────────────────────
+
+  /conversations:
+    get:
+      tags: [Messages]
+      summary: Список діалогів
+      responses:
+        '200':
+          description: Діалоги
+    post:
+      tags: [Messages]
+      summary: Створити або знайти діалог
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [participant_id]
+              properties:
+                participant_id: { type: integer }
+                contract_id:    { type: integer, nullable: true }
+                vacancy_id:     { type: integer, nullable: true }
+      responses:
+        '200':
+          description: Діалог
+
+  /conversations/{conversation}/messages:
+    get:
+      tags: [Messages]
+      summary: Повідомлення діалогу
+      parameters:
+        - name: conversation
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Список повідомлень
+    post:
+      tags: [Messages]
+      summary: Надіслати повідомлення
+      parameters:
+        - name: conversation
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [content]
+              properties:
+                content:  { type: string, example: "Привіт! Готовий до роботи." }
+                type:     { type: string, enum: [text, file, image], default: text }
+                file_url: { type: string, format: uri, nullable: true }
+      responses:
+        '201':
+          description: Повідомлення надіслано
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/Message' }
+
+  # ────────────────────────────────────────────────────────────
+  # REFERRAL
+  # ────────────────────────────────────────────────────────────
+
+  /referral:
+    get:
+      tags: [Referral]
+      summary: Реферальна система
+      responses:
+        '200':
+          description: Статистика рефералів
+
+  /referral/payments:
+    get:
+      tags: [Referral]
+      summary: Виплати по реферальній програмі
+      responses:
+        '200':
+          description: Список виплат
+
+  # ────────────────────────────────────────────────────────────
+  # SUPPORT
+  # ────────────────────────────────────────────────────────────
+
+  /support/tickets:
+    get:
+      tags: [Support]
+      summary: Мої тікети підтримки
+      responses:
+        '200':
+          description: Список тікетів
+    post:
+      tags: [Support]
+      summary: Створити тікет
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [subject, message]
+              properties:
+                subject:  { type: string, example: "Проблема з гаманцем" }
+                message:  { type: string }
+                priority: { type: string, enum: [low, normal, high, urgent], default: normal }
+      responses:
+        '201':
+          description: Тікет створено
+
+  # ────────────────────────────────────────────────────────────
+  # ADMIN
+  # ────────────────────────────────────────────────────────────
+
+  /admin/users:
+    get:
+      tags: [Admin]
+      summary: "[Admin] Список користувачів"
+      parameters:
+        - name: role
+          in: query
+          schema: { type: string, enum: [programmer, project_owner] }
+        - name: search
+          in: query
+          schema: { type: string }
+        - name: status
+          in: query
+          schema: { type: string, enum: [active, banned] }
+        - name: page
+          in: query
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Список користувачів
+
+  /admin/users/{user}/ban:
+    post:
+      tags: [Admin]
+      summary: "[Admin] Заблокувати користувача"
+      parameters:
+        - name: user
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason: { type: string }
+      responses:
+        '200':
+          description: Заблоковано
+
+  /admin/wallets/{user}/adjust:
+    post:
+      tags: [Admin]
+      summary: "[Admin] Скоригувати баланс"
+      parameters:
+        - name: user
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [amount, type, description]
+              properties:
+                amount:      { type: number, example: 50 }
+                type:        { type: string, enum: [credit, debit] }
+                description: { type: string, example: "Бонус за активність" }
+      responses:
+        '200':
+          description: Баланс скориговано
+
+  /admin/analytics/overview:
+    get:
+      tags: [Admin]
+      summary: "[Admin] Загальна аналітика"
+      responses:
+        '200':
+          description: Статистика платформи
+
+  /admin/settings:
+    get:
+      tags: [Admin]
+      summary: "[Admin] Налаштування платформи"
+      responses:
+        '200':
+          description: Список налаштувань
+
+  /admin/feature-flags:
+    get:
+      tags: [Admin]
+      summary: "[Admin] Feature flags"
+      responses:
+        '200':
+          description: Список прапорців
+
+  /admin/translations:
+    get:
+      tags: [Admin]
+      summary: "[Admin] Переклади"
+      parameters:
+        - name: locale
+          in: query
+          schema: { type: string }
+        - name: group
+          in: query
+          schema: { type: string }
+        - name: status
+          in: query
+          schema: { type: string, enum: [translated, untranslated, needs_review] }
+      responses:
+        '200':
+          description: Список перекладів
+
+# ══════════════════════════════════════════════════════════════
+# TAGS
+# ══════════════════════════════════════════════════════════════
+tags:
+  - name: Auth
+    description: Авторизація та реєстрація
+  - name: Public
+    description: Публічні ендпоінти (без авторизації)
+  - name: Profile
+    description: Профіль користувача
+  - name: Resume
+    description: Резюме розробника
+  - name: Feed
+    description: Стрічка вакансій і резюме
+  - name: Projects
+    description: Проекти
+  - name: Vacancies
+    description: Вакансії та заявки
+  - name: Contracts
+    description: Смарт-контракти
+  - name: Tasks
+    description: Задачі контракту
+  - name: Wallet
+    description: Гаманець і транзакції
+  - name: Reviews
+    description: Відгуки та рейтинг
+  - name: Messages
+    description: Чат і повідомлення
+  - name: Referral
+    description: Реферальна система
+  - name: Support
+    description: Підтримка
+  - name: Admin
+    description: Панель адміністратора (super_admin only)

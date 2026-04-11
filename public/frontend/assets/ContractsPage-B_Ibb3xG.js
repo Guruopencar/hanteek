@@ -1,0 +1,1 @@
+import{s as e,y as t}from"./runtime-core.esm-bundler-B8vw96nN.js";import{t as n}from"./_plugin-vue_export-helper-V-yks4gF.js";var r={};function i(n,r){return t(),e(`div`,null,`contracts/ContractsPage`)}var a=n(r,[[`render`,i]]);export{a as default};
