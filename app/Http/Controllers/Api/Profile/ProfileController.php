@@ -38,6 +38,10 @@ class ProfileController extends ApiController
             'linkedin'   => 'nullable|url|max:255',
             'github'     => 'nullable|url|max:255',
             'website'    => 'nullable|url|max:255',
+			'facebook'  => 'nullable|url|max:255',
+			'instagram' => 'nullable|string|max:100',
+			'whatsapp'  => 'nullable|string|max:20',
+			'viber'     => 'nullable|string|max:20',
             'locale'     => 'nullable|in:uk,en',
         ]);
 
@@ -100,4 +104,42 @@ class ProfileController extends ApiController
 
         return $this->success(null, 'Користувача розблоковано');
     }
+	
+	
+public function search(Request $request): JsonResponse
+{
+    $request->validate([
+        'query' => 'required|string|min:2|max:100',
+        'role'  => 'nullable|in:programmer,project_owner',
+    ]);
+
+    $q = $request->input('query');
+
+    $users = User::with(['profile', 'developerResume'])
+        ->where('is_active', true)
+        ->where(function ($query) use ($q) {
+            $query->where('email', 'like', '%' . $q . '%')
+                  ->orWhere('phone', 'like', '%' . $q . '%')
+                  ->orWhereHas('profile', function ($p) use ($q) {
+                      $p->where('first_name', 'like', '%' . $q . '%')
+                        ->orWhere('last_name', 'like', '%' . $q . '%')
+                        ->orWhereRaw(
+                            "CONCAT(first_name, ' ', last_name) LIKE ?",
+                            ['%' . $q . '%']
+                        );
+                  });
+        })
+        ->when($request->input('role'), fn($query, $role) => $query->where('role', $role))
+        ->limit(8)
+        ->get();
+
+    return $this->success($users->map(fn($u) => [
+        'id'       => $u->id,
+        'name'     => trim(($u->profile?->first_name ?? '') . ' ' . ($u->profile?->last_name ?? '')) ?: $u->name,
+        'avatar'   => $u->profile?->avatar,
+        'role'     => $u->role,
+        'position' => $u->developerResume?->position,
+        'rating'   => $u->profile?->average_rating,
+    ]));
+}
 }

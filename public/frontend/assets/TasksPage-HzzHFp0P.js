@@ -1,0 +1,1 @@
+import{b as e,l as t}from"./runtime-core.esm-bundler-kaCxoGPp.js";import{t as n}from"./_plugin-vue_export-helper-TcpyXLsZ.js";var r={};function i(n,r){return e(),t(`div`,null,`contracts/TasksPage`)}var a=n(r,[[`render`,i]]);export{a as default};

@@ -4,15 +4,29 @@ namespace App\Http\Controllers\Api\Contract;
 
 use App\Http\Controllers\Api\ApiController;
 use App\Models\Contract;
+use App\Models\ContractTask;
 use App\Models\ContractTimeLog;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class TimeLogController extends ApiController
 {
+    private function authorizeParticipant(Contract $contract): bool
+    {
+        $user = auth()->user();
+        return $contract->owner_id === $user->id || $contract->developer_id === $user->id;
+    }
+
+    private function ensureLogBelongsToContract(ContractTimeLog $log, Contract $contract): bool
+    {
+        return $log->contract_id === $contract->id;
+    }
+
     public function index(Contract $contract): JsonResponse
     {
-        $this->authorize($contract);
+        if (!$this->authorizeParticipant($contract)) {
+            return $this->forbidden();
+        }
 
         $logs = $contract->timeLogs()
             ->with('user.profile', 'task')
@@ -43,8 +57,19 @@ class TimeLogController extends ApiController
             'hours'       => 'required|numeric|min:0.5|max:24',
             'description' => 'nullable|string|max:500',
             'logged_date' => 'required|date|before_or_equal:today',
-            'task_id'     => 'nullable|exists:contract_tasks,id',
+            'task_id'     => 'nullable|integer|exists:contract_tasks,id',
         ]);
+
+        // Перевірка що task_id належить цьому контракту
+        if (!empty($data['task_id'])) {
+            $taskBelongs = ContractTask::where('id', $data['task_id'])
+                ->where('contract_id', $contract->id)
+                ->exists();
+
+            if (!$taskBelongs) {
+                return $this->error('Задача не належить цьому контракту');
+            }
+        }
 
         $log = $contract->timeLogs()->create([
             ...$data,
@@ -56,6 +81,10 @@ class TimeLogController extends ApiController
 
     public function update(Request $request, Contract $contract, ContractTimeLog $log): JsonResponse
     {
+        if (!$this->ensureLogBelongsToContract($log, $contract)) {
+            return $this->notFound();
+        }
+
         if ($log->user_id !== $request->user()->id) {
             return $this->forbidden();
         }
@@ -67,26 +96,20 @@ class TimeLogController extends ApiController
         ]);
 
         $log->update($data);
-
         return $this->success($log->fresh());
     }
 
     public function destroy(Request $request, Contract $contract, ContractTimeLog $log): JsonResponse
     {
+        if (!$this->ensureLogBelongsToContract($log, $contract)) {
+            return $this->notFound();
+        }
+
         if ($log->user_id !== $request->user()->id) {
             return $this->forbidden();
         }
 
         $log->delete();
-
         return $this->success(null, 'Запис видалено');
-    }
-
-    private function authorize(Contract $contract): void
-    {
-        $user = auth()->user();
-        if ($contract->owner_id !== $user->id && $contract->developer_id !== $user->id) {
-            abort(403);
-        }
     }
 }

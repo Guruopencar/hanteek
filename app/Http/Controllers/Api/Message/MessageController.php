@@ -11,15 +11,21 @@ use Illuminate\Http\Request;
 
 class MessageController extends ApiController
 {
+    private function authorizeConversation(Conversation $conversation): bool
+    {
+        $userId = auth()->id();
+        return $conversation->participant_1 === $userId
+            || $conversation->participant_2 === $userId;
+    }
+
     public function index(Request $request, Conversation $conversation): JsonResponse
     {
-        $userId = $request->user()->id;
-
-        if ($conversation->participant_1 !== $userId && $conversation->participant_2 !== $userId) {
+        if (!$this->authorizeConversation($conversation)) {
             return $this->forbidden();
         }
 
-        // Позначити всі як прочитані
+        $userId = $request->user()->id;
+
         $conversation->messages()
             ->where('sender_id', '!=', $userId)
             ->where('is_read', false)
@@ -35,9 +41,7 @@ class MessageController extends ApiController
 
     public function store(Request $request, Conversation $conversation): JsonResponse
     {
-        $userId = $request->user()->id;
-
-        if ($conversation->participant_1 !== $userId && $conversation->participant_2 !== $userId) {
+        if (!$this->authorizeConversation($conversation)) {
             return $this->forbidden();
         }
 
@@ -48,23 +52,35 @@ class MessageController extends ApiController
         ]);
 
         $message = $conversation->messages()->create([
-            'sender_id' => $userId,
+            'sender_id' => $request->user()->id,
             'type'      => $data['type'] ?? 'text',
             'content'   => $data['content'],
             'file_url'  => $data['file_url'] ?? null,
         ]);
 
-        // Оновити last_message_at
         $conversation->update(['last_message_at' => now()]);
-
-        // Broadcast через Pusher (автоматично через ShouldBroadcast)
         broadcast($message)->toOthers();
 
         return $this->created(new MessageResource($message->load('sender.profile')));
     }
 
-    public function markRead(Request $request, Message $message): JsonResponse
+    public function markRead(Request $request, Conversation $conversation, Message $message): JsonResponse
     {
+        // Перевірка що conversation належить user
+        if (!$this->authorizeConversation($conversation)) {
+            return $this->forbidden();
+        }
+
+        // Перевірка що message належить цій conversation
+        if ($message->conversation_id !== $conversation->id) {
+            return $this->forbidden();
+        }
+
+        // Тільки отримувач може позначити як прочитане
+        if ($message->sender_id === $request->user()->id) {
+            return $this->error('Не можна позначити своє повідомлення як прочитане');
+        }
+
         $message->markAsRead();
         return $this->success(null, 'Прочитано');
     }

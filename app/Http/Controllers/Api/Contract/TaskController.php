@@ -11,9 +11,23 @@ use Illuminate\Http\Request;
 
 class TaskController extends ApiController
 {
+    private function authorizeParticipant(Contract $contract): bool
+    {
+        $user = auth()->user();
+        return $contract->owner_id === $user->id || $contract->developer_id === $user->id;
+    }
+
+    private function ensureTaskBelongsToContract(ContractTask $task, Contract $contract): bool
+    {
+        return $task->contract_id === $contract->id;
+    }
+
     public function index(Contract $contract): JsonResponse
     {
-        $this->authorizeContract($contract);
+        if (!$this->authorizeParticipant($contract)) {
+            return $this->forbidden();
+        }
+
         $tasks = $contract->tasks()->with('assignee.profile', 'creator.profile')->get();
         return $this->success(TaskResource::collection($tasks));
     }
@@ -44,7 +58,14 @@ class TaskController extends ApiController
 
     public function show(Contract $contract, ContractTask $task): JsonResponse
     {
-        $this->authorizeContract($contract);
+        if (!$this->authorizeParticipant($contract)) {
+            return $this->forbidden();
+        }
+
+        if (!$this->ensureTaskBelongsToContract($task, $contract)) {
+            return $this->notFound();
+        }
+
         return $this->success(new TaskResource($task->load('assignee.profile')));
     }
 
@@ -52,6 +73,10 @@ class TaskController extends ApiController
     {
         if ($contract->owner_id !== $request->user()->id) {
             return $this->forbidden();
+        }
+
+        if (!$this->ensureTaskBelongsToContract($task, $contract)) {
+            return $this->notFound();
         }
 
         $data = $request->validate([
@@ -73,16 +98,23 @@ class TaskController extends ApiController
         if ($contract->owner_id !== $request->user()->id) {
             return $this->forbidden();
         }
+
+        if (!$this->ensureTaskBelongsToContract($task, $contract)) {
+            return $this->notFound();
+        }
+
         $task->delete();
         return $this->success(null, 'Задачу видалено');
     }
 
     public function markDone(Request $request, Contract $contract, ContractTask $task): JsonResponse
     {
-        $user = $request->user();
-
-        if ($contract->owner_id !== $user->id && $contract->developer_id !== $user->id) {
+        if (!$this->authorizeParticipant($contract)) {
             return $this->forbidden();
+        }
+
+        if (!$this->ensureTaskBelongsToContract($task, $contract)) {
+            return $this->notFound();
         }
 
         $task->markAsDone();
@@ -91,6 +123,10 @@ class TaskController extends ApiController
 
     public function reorder(Request $request, Contract $contract): JsonResponse
     {
+        if ($contract->owner_id !== $request->user()->id) {
+            return $this->forbidden();
+        }
+
         $request->validate(['tasks' => 'required|array', 'tasks.*' => 'integer']);
 
         foreach ($request->tasks as $order => $taskId) {
@@ -100,13 +136,5 @@ class TaskController extends ApiController
         }
 
         return $this->success(null, 'Порядок оновлено');
-    }
-
-    private function authorizeContract(Contract $contract): void
-    {
-        $user = auth()->user();
-        if ($contract->owner_id !== $user->id && $contract->developer_id !== $user->id) {
-            abort(403);
-        }
     }
 }

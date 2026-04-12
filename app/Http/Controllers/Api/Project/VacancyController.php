@@ -11,6 +11,11 @@ use Illuminate\Http\Request;
 
 class VacancyController extends ApiController
 {
+    private function ensureVacancyBelongsToProject(Vacancy $vacancy, Project $project): bool
+    {
+        return $vacancy->project_id === $project->id;
+    }
+
     public function index(Project $project): JsonResponse
     {
         if ($project->owner_id !== auth()->id()) {
@@ -57,6 +62,10 @@ class VacancyController extends ApiController
 
     public function show(Project $project, Vacancy $vacancy): JsonResponse
     {
+        if (!$this->ensureVacancyBelongsToProject($vacancy, $project)) {
+            return $this->notFound();
+        }
+
         $vacancy->load(['owner.profile', 'project']);
         $vacancy->incrementViews();
         return $this->success(new VacancyResource($vacancy));
@@ -66,6 +75,10 @@ class VacancyController extends ApiController
     {
         if ($project->owner_id !== $request->user()->id) {
             return $this->forbidden();
+        }
+
+        if (!$this->ensureVacancyBelongsToProject($vacancy, $project)) {
+            return $this->notFound();
         }
 
         $data = $request->validate([
@@ -82,7 +95,6 @@ class VacancyController extends ApiController
         ]);
 
         $vacancy->update($data);
-
         return $this->success(new VacancyResource($vacancy->fresh()));
     }
 
@@ -92,8 +104,11 @@ class VacancyController extends ApiController
             return $this->forbidden();
         }
 
-        $vacancy->delete();
+        if (!$this->ensureVacancyBelongsToProject($vacancy, $project)) {
+            return $this->notFound();
+        }
 
+        $vacancy->delete();
         return $this->success(null, 'Вакансію видалено');
     }
 
@@ -103,14 +118,11 @@ class VacancyController extends ApiController
             return $this->forbidden();
         }
 
-        $vacancy->update([
-            'status'       => 'published',
-            'published_at' => now(),
-        ]);
+        if (!$this->ensureVacancyBelongsToProject($vacancy, $project)) {
+            return $this->notFound();
+        }
 
-        // Збільшити лічильник вакансій
-        $project->increment('vacancies_count');
-
+        $vacancy->update(['status' => 'published', 'published_at' => now()]);
         return $this->success(null, 'Вакансію опубліковано');
     }
 
@@ -120,8 +132,11 @@ class VacancyController extends ApiController
             return $this->forbidden();
         }
 
-        $vacancy->update(['status' => 'archived']);
+        if (!$this->ensureVacancyBelongsToProject($vacancy, $project)) {
+            return $this->notFound();
+        }
 
+        $vacancy->update(['status' => 'archived']);
         return $this->success(null, 'Вакансію архівовано');
     }
 }

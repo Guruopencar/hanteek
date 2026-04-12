@@ -10,6 +10,11 @@ use Illuminate\Http\Request;
 
 class ApplicationController extends ApiController
 {
+    private function ensureApplicationBelongsToVacancy(VacancyApplication $application, Vacancy $vacancy): bool
+    {
+        return $application->vacancy_id === $vacancy->id;
+    }
+
     public function index(Vacancy $vacancy): JsonResponse
     {
         if ($vacancy->owner_id !== auth()->id()) {
@@ -24,12 +29,12 @@ class ApplicationController extends ApiController
         return response()->json([
             'success' => true,
             'data'    => $applications->map(fn($a) => [
-                'id'             => $a->id,
-                'status'         => $a->status,
-                'cover_letter'   => $a->cover_letter,
-                'proposed_rate'  => $a->proposed_rate,
-                'created_at'     => $a->created_at->toISOString(),
-                'applicant' => [
+                'id'            => $a->id,
+                'status'        => $a->status,
+                'cover_letter'  => $a->cover_letter,
+                'proposed_rate' => $a->proposed_rate,
+                'created_at'    => $a->created_at->toISOString(),
+                'applicant'     => [
                     'id'             => $a->applicant->id,
                     'full_name'      => $a->applicant->profile?->full_name,
                     'avatar'         => $a->applicant->profile?->avatar,
@@ -50,14 +55,12 @@ class ApplicationController extends ApiController
 
     public function apply(Request $request, Vacancy $vacancy): JsonResponse
     {
-        $user = $request->user();
-
         if ($vacancy->status !== 'published') {
             return $this->error('Вакансія недоступна для заявок');
         }
 
         $exists = VacancyApplication::where('vacancy_id', $vacancy->id)
-            ->where('applicant_id', $user->id)
+            ->where('applicant_id', $request->user()->id)
             ->exists();
 
         if ($exists) {
@@ -72,11 +75,10 @@ class ApplicationController extends ApiController
         $application = VacancyApplication::create([
             ...$data,
             'vacancy_id'   => $vacancy->id,
-            'applicant_id' => $user->id,
+            'applicant_id' => $request->user()->id,
             'status'       => 'pending',
         ]);
 
-        // Збільшити лічильник заявок
         $vacancy->increment('applications_count');
 
         return $this->created($application, 'Заявку надіслано');
@@ -86,6 +88,11 @@ class ApplicationController extends ApiController
     {
         if ($vacancy->owner_id !== $request->user()->id) {
             return $this->forbidden();
+        }
+
+        // Перевірка що application належить саме цій vacancy
+        if (!$this->ensureApplicationBelongsToVacancy($application, $vacancy)) {
+            return $this->notFound();
         }
 
         $data = $request->validate([

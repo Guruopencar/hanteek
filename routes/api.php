@@ -44,11 +44,13 @@ Route::prefix('v1')->group(function () {
     });
 
     // Публічні дані
+
     Route::get('settings/public',       [SettingController::class, 'public']);
     Route::get('locales',               [SettingController::class, 'locales']);
     Route::get('translations/{locale}', [SettingController::class, 'translations']);
 
     // Публічні профілі
+	Route::get('users/search', [ProfileController::class, 'search']); 
     Route::get('users/{user}/profile',  [ProfileController::class, 'show']);
     Route::get('rating',                [RatingController::class, 'index']);
     Route::get('news',                  [NewsController::class, 'index']);
@@ -188,7 +190,7 @@ Route::prefix('v1')->group(function () {
             Route::get('/{conversation}',               [ConversationController::class, 'show']);
             Route::get('/{conversation}/messages',      [MessageController::class, 'index']);
             Route::post('/{conversation}/messages',     [MessageController::class, 'store']);
-            Route::put('/messages/{message}/read',      [MessageController::class, 'markRead']);
+            Route::put('/{conversation}/messages/{message}/read', [MessageController::class, 'markRead']);
         });
 
         // Referral
@@ -204,6 +206,8 @@ Route::prefix('v1')->group(function () {
             Route::get('tickets/{ticket}',      [SupportController::class, 'show']);
             Route::post('tickets/{ticket}/reply',[SupportController::class, 'reply']);
         });
+		
+	
 
         // ── Super Admin маршрути ───────────────────────────────
         Route::middleware('role:super_admin')->prefix('admin')->group(function () {
