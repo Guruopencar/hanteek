@@ -23,6 +23,7 @@ class User extends Authenticatable implements HasMedia
         'role', 'active_profile', 'locale',
         'is_verified', 'is_active',
         'last_login_at', 'referral_code', 'referred_by',
+        'stripe_customer_id',
     ];
 
     protected $hidden = ['password', 'remember_token'];
@@ -53,6 +54,11 @@ class User extends Authenticatable implements HasMedia
     public function recruiterProfile(): HasOne
     {
         return $this->hasOne(RecruiterProfile::class);
+    }
+
+    public function paymentMethods(): HasMany
+    {
+        return $this->hasMany(PaymentMethod::class);
     }
 
     public function wallet(): HasOne

@@ -44,6 +44,9 @@ Route::prefix('v1')->group(function () {
         Route::post('resend-code',      [VerificationController::class, 'resend']);
     });
 
+    // Stripe webhook (public — signed by Stripe)
+    Route::post('stripe/webhook', [WalletController::class, 'webhook']);
+
     // Публічні дані
 
     Route::get('settings/public',       [SettingController::class, 'public']);
@@ -185,6 +188,17 @@ Route::prefix('v1')->group(function () {
             Route::post('transfer',             [WalletController::class, 'transfer']);
             Route::get('transactions',          [TransactionController::class, 'index']);
             Route::get('transactions/{uuid}',   [TransactionController::class, 'show']);
+
+            // Stripe
+            Route::get('stripe/key',            [WalletController::class, 'publicKey']);
+            Route::post('stripe/deposit',       [WalletController::class, 'depositIntent']);
+
+            // Payment methods (saved cards)
+            Route::get('cards',                          [\App\Http\Controllers\Api\Wallet\PaymentMethodController::class, 'index']);
+            Route::post('cards/setup-intent',            [\App\Http\Controllers\Api\Wallet\PaymentMethodController::class, 'setupIntent']);
+            Route::post('cards',                         [\App\Http\Controllers\Api\Wallet\PaymentMethodController::class, 'store']);
+            Route::post('cards/{paymentMethod}/default', [\App\Http\Controllers\Api\Wallet\PaymentMethodController::class, 'setDefault']);
+            Route::delete('cards/{paymentMethod}',       [\App\Http\Controllers\Api\Wallet\PaymentMethodController::class, 'destroy']);
         });
 
         // Reviews

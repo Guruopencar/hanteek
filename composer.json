@@ -17,7 +17,8 @@
         "maatwebsite/excel": "^3.1",
         "spatie/laravel-medialibrary": "^11.21",
         "spatie/laravel-permission": "^6.25",
-        "spatie/laravel-translatable": "^6.13"
+        "spatie/laravel-translatable": "^6.13",
+        "stripe/stripe-php": "^15.0"
     },
     "require-dev": {
         "barryvdh/laravel-ide-helper": "^3.7",
