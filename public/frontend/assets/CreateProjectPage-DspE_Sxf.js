@@ -1,0 +1,1 @@
+import{l as e,x as t}from"./runtime-core.esm-bundler-DtaNsoPQ.js";import{t as n}from"./_plugin-vue_export-helper-TcpyXLsZ.js";var r={};function i(n,r){return t(),e(`div`,null,`projects/CreateProjectPage`)}var a=n(r,[[`render`,i]]);export{a as default};
