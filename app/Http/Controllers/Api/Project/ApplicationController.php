@@ -3,13 +3,19 @@
 namespace App\Http\Controllers\Api\Project;
 
 use App\Http\Controllers\Api\ApiController;
+use App\Http\Resources\ContractResource;
+use App\Models\Contract;
 use App\Models\Vacancy;
 use App\Models\VacancyApplication;
+use App\Services\ContractService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class ApplicationController extends ApiController
 {
+    public function __construct(private ContractService $contractService) {}
+
     private function ensureApplicationBelongsToVacancy(VacancyApplication $application, Vacancy $vacancy): bool
     {
         return $application->vacancy_id === $vacancy->id;
@@ -99,12 +105,62 @@ class ApplicationController extends ApiController
             'status' => 'required|in:accepted,rejected,viewed',
         ]);
 
-        $application->update([
-            'status'       => $data['status'],
-            'responded_at' => now(),
-        ]);
+        if (in_array($application->status, ['withdrawn', 'rejected', 'accepted'], true)) {
+            return $this->error('Заявка вже опрацьована та не може змінювати статус');
+        }
 
-        return $this->success($application->fresh(), 'Статус оновлено');
+        if ($data['status'] !== 'accepted') {
+            $application->update([
+                'status'       => $data['status'],
+                'responded_at' => now(),
+            ]);
+
+            return $this->success($application->fresh(), 'Статус оновлено');
+        }
+
+        $existingContract = Contract::where('vacancy_id', $vacancy->id)
+            ->where('developer_id', $application->applicant_id)
+            ->whereNotIn('status', ['cancelled', 'archived'])
+            ->first();
+
+        if ($existingContract) {
+            return $this->error('Контракт для цього кандидата вже існує');
+        }
+
+        [$application, $contract] = DB::transaction(function () use ($application, $vacancy, $request) {
+            $application->update([
+                'status'       => 'accepted',
+                'responded_at' => now(),
+            ]);
+
+            $hourlyRate = $vacancy->contract_type === 'time_material'
+                ? ($application->proposed_rate ?? $vacancy->hourly_rate)
+                : null;
+
+            $totalAmount = $vacancy->contract_type === 'fixed_price'
+                ? ($application->proposed_rate ?? $vacancy->budget)
+                : null;
+
+            $contract = $this->contractService->create($request->user(), [
+                'developer_id'    => $application->applicant_id,
+                'vacancy_id'      => $vacancy->id,
+                'type'            => 'vacancy',
+                'title'           => $vacancy->title,
+                'description'    => $vacancy->description,
+                'contract_type'   => $vacancy->contract_type,
+                'total_amount'    => $totalAmount,
+                'hourly_rate'     => $hourlyRate,
+                'estimated_hours' => $vacancy->estimated_hours,
+                'currency'        => $vacancy->currency ?? 'USD',
+            ]);
+
+            return [$application->fresh(), $contract];
+        });
+
+        return $this->created([
+            'application' => $application,
+            'contract'    => new ContractResource($contract),
+        ], 'Заявку прийнято, контракт створено');
     }
 
     public function myApplications(Request $request): JsonResponse

@@ -2,13 +2,13 @@
 
 use Illuminate\Support\Facades\Route;
 
-// Віддає Vue SPA для всіх веб маршрутів
+// Віддає Vue SPA для всіх веб маршрутів (крім /storage/*, /api/*, /build/*)
 Route::get('/{any?}', function () {
     $indexPath = public_path('frontend/index.html');
-    
+
     if (file_exists($indexPath)) {
         return response()->file($indexPath);
     }
-    
+
     return response('Frontend not built yet', 404);
-})->where('any', '.*');
+})->where('any', '^(?!storage|api|build).*');

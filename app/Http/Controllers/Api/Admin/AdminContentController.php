@@ -68,7 +68,7 @@ class AdminContentController extends ApiController
     // News CRUD
     public function index(Request $request): JsonResponse
     {
-        $news = News::with('author.profile')
+        $news = News::with(['author.profile', 'translations'])
             ->orderByDesc('created_at')
             ->paginate(20);
         return response()->json(['success' => true, 'data' => $news]);
@@ -76,24 +76,30 @@ class AdminContentController extends ApiController
 
     public function store(Request $request): JsonResponse
     {
+        $translations = $this->decodeTranslations($request);
+
         $data = $request->validate([
-            'slug'           => 'required|string|unique:news,slug',
-            'cover_image'    => 'nullable|url',
-            'translations'   => 'required|array',
-            'translations.uk.title'   => 'required|string',
-            'translations.uk.content' => 'required|string',
-            'translations.en.title'   => 'nullable|string',
-            'translations.en.content' => 'nullable|string',
+            'slug'         => 'required|string|unique:news,slug',
+            'cover_image'  => 'nullable|url',
+            'cover'        => 'nullable|image|mimes:jpg,jpeg,png,webp,gif|max:5120',
         ]);
+
+        $this->validateTranslations($translations);
+
+        $coverUrl = $data['cover_image'] ?? null;
+        if ($request->hasFile('cover')) {
+            $path = $request->file('cover')->store('news', 'public');
+            $coverUrl = asset('storage/' . $path);
+        }
 
         $news = News::create([
-            'slug'      => $data['slug'],
-            'cover_image' => $data['cover_image'] ?? null,
-            'author_id' => auth()->id(),
-            'status'    => 'draft',
+            'slug'        => $data['slug'],
+            'cover_image' => $coverUrl,
+            'author_id'   => auth()->id(),
+            'status'      => 'draft',
         ]);
 
-        foreach ($data['translations'] as $locale => $translation) {
+        foreach ($translations as $locale => $translation) {
             if (!empty($translation['title'])) {
                 NewsTranslation::create([
                     'news_id' => $news->id,
@@ -110,23 +116,62 @@ class AdminContentController extends ApiController
 
     public function update(Request $request, News $news): JsonResponse
     {
+        $translations = $this->decodeTranslations($request);
+
         $data = $request->validate([
-            'cover_image'  => 'nullable|url',
-            'translations' => 'nullable|array',
+            'cover_image' => 'nullable|url',
+            'cover'       => 'nullable|image|mimes:jpg,jpeg,png,webp,gif|max:5120',
         ]);
 
-        $news->update(collect($data)->except('translations')->toArray());
+        $updateFields = [];
+        if (array_key_exists('cover_image', $data)) {
+            $updateFields['cover_image'] = $data['cover_image'];
+        }
+        if ($request->hasFile('cover')) {
+            $path = $request->file('cover')->store('news', 'public');
+            $updateFields['cover_image'] = asset('storage/' . $path);
+        }
+        if ($updateFields) {
+            $news->update($updateFields);
+        }
 
-        if (!empty($data['translations'])) {
-            foreach ($data['translations'] as $locale => $translation) {
+        if ($translations) {
+            $this->validateTranslations($translations, false);
+            foreach ($translations as $locale => $translation) {
+                if (empty($translation['title'])) continue;
                 NewsTranslation::updateOrCreate(
                     ['news_id' => $news->id, 'locale' => $locale],
-                    $translation
+                    [
+                        'title'   => $translation['title'],
+                        'excerpt' => $translation['excerpt'] ?? null,
+                        'content' => $translation['content'] ?? '',
+                    ]
                 );
             }
         }
 
         return $this->success($news->fresh('translations'));
+    }
+
+    private function decodeTranslations(Request $request): array
+    {
+        $raw = $request->input('translations');
+        if (is_string($raw)) {
+            $decoded = json_decode($raw, true);
+            return is_array($decoded) ? $decoded : [];
+        }
+        return is_array($raw) ? $raw : [];
+    }
+
+    private function validateTranslations(array $translations, bool $ukRequired = true): void
+    {
+        if ($ukRequired) {
+            abort_unless(
+                !empty($translations['uk']['title']) && !empty($translations['uk']['content']),
+                422,
+                'Українська версія (title, content) обов’язкова'
+            );
+        }
     }
 
     public function destroy(News $news): JsonResponse

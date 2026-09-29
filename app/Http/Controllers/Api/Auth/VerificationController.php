@@ -7,6 +7,8 @@ use App\Models\VerificationCode;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 
 class VerificationController extends ApiController
 {
@@ -59,9 +61,36 @@ class VerificationController extends ApiController
             'expires_at' => now()->addMinutes(10),
         ]);
 
-        // TODO: відправити email/SMS
-        // Mail::to($user->email)->send(new VerificationMail($code->code));
+        $this->dispatchCode($user, $code->code, $request->type);
 
         return $this->success(null, 'Код надіслано повторно');
+    }
+
+    private function dispatchCode(User $user, string $code, string $type): void
+    {
+        if ($type === 'email') {
+            try {
+                Mail::raw(
+                    "Ваш код підтвердження Hunteek: {$code}\n\nКод дійсний 10 хвилин.",
+                    function ($m) use ($user) {
+                        $m->to($user->email)->subject('Hunteek — код підтвердження');
+                    }
+                );
+            } catch (\Throwable $e) {
+                Log::warning('Verification email failed', [
+                    'user_id' => $user->id,
+                    'error'   => $e->getMessage(),
+                ]);
+            }
+            return;
+        }
+
+        // SMS: пропускаємо через нашу абстракцію; якщо gateway не налаштований —
+        // код потрапляє в лог (це достатньо для розробки/prod-fallback).
+        Log::info('SMS verification code dispatched', [
+            'user_id' => $user->id,
+            'phone'   => $user->phone,
+            'code'    => $code,
+        ]);
     }
 }

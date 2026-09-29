@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class DeveloperPortfolio extends Model
 {
+	protected $table = 'developer_portfolio';
     protected $fillable = [
         'resume_id', 'title', 'description',
         'url', 'image_url', 'technologies', 'sort_order',

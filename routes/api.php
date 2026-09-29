@@ -29,6 +29,7 @@ use App\Http\Controllers\Api\Admin\AdminFinanceController;
 use App\Http\Controllers\Api\Admin\AdminAnalyticsController;
 use App\Http\Controllers\Api\Admin\AdminSettingController;
 use App\Http\Controllers\Api\Admin\AdminTranslationController;
+use App\Http\Controllers\Api\Admin\AdminSupportController;
 
 // ── Публічні маршрути (без авторизації) ──────────────────────
 Route::prefix('v1')->group(function () {
@@ -50,11 +51,21 @@ Route::prefix('v1')->group(function () {
     Route::get('translations/{locale}', [SettingController::class, 'translations']);
 
     // Публічні профілі
+	Route::get('skills', function() {
+    $skills = \App\Models\Skill::orderBy('usage_count', 'desc')
+        ->orderBy('name')
+        ->get(['id', 'name', 'category']);
+    return response()->json(['success' => true, 'data' => $skills]);
+});
+	
 	Route::get('users/search', [ProfileController::class, 'search']); 
     Route::get('users/{user}/profile',  [ProfileController::class, 'show']);
     Route::get('rating',                [RatingController::class, 'index']);
     Route::get('news',                  [NewsController::class, 'index']);
     Route::get('news/{slug}',           [NewsController::class, 'show']);
+	
+	
+	
 
     // ── Захищені маршрути (потрібна авторизація) ──────────────
     Route::middleware('auth:sanctum')->group(function () {
@@ -235,6 +246,14 @@ Route::prefix('v1')->group(function () {
                 ->names('admin.news');
             Route::post('news/{news}/publish',      [AdminContentController::class, 'publishNews']);
 
+            // Support tickets
+            Route::get('support/stats',                 [AdminSupportController::class, 'stats']);
+            Route::get('support/tickets',               [AdminSupportController::class, 'index']);
+            Route::get('support/tickets/{ticket}',      [AdminSupportController::class, 'show']);
+            Route::post('support/tickets/{ticket}/reply',       [AdminSupportController::class, 'reply']);
+            Route::put('support/tickets/{ticket}/status',       [AdminSupportController::class, 'updateStatus']);
+            Route::put('support/tickets/{ticket}/assign',       [AdminSupportController::class, 'assign']);
+
             // Finance
             Route::get('transactions',                  [AdminFinanceController::class, 'index']);
             Route::get('wallets',                       [AdminFinanceController::class, 'wallets']);
@@ -262,3 +281,5 @@ Route::prefix('v1')->group(function () {
         });
     });
 });
+
+        // Skills autocomplete (публічний)

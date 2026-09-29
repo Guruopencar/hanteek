@@ -68,15 +68,28 @@ class AuthController extends ApiController
 
     public function switchProfile(Request $request): JsonResponse
     {
-        $request->validate(['profile' => 'required|in:programmer,recruiter']);
-        $user = $request->user();
+        $request->validate([
+            'profile' => 'required|in:developer,recruiter,programmer'
+        ]);
 
-        if ($user->role !== 'project_owner') {
-            return $this->forbidden('Тільки project owner може перемикати профіль');
+        $user = $request->user()->load(['developerResume', 'recruiterProfile']);
+
+        // Маппінг: programmer -> developer (зворотна сумісність)
+        $target = $request->profile === 'programmer' ? 'developer' : $request->profile;
+
+        if ($target === 'developer' && !$user->developerResume) {
+            return $this->error('PROFILE_NOT_CREATED', 422);
         }
 
-        $user->update(['active_profile' => $request->profile]);
-        return $this->success(['active_profile' => $request->profile]);
+        if ($target === 'recruiter' && !$user->recruiterProfile) {
+            return $this->error('PROFILE_NOT_CREATED', 422);
+        }
+
+        $user->update(['active_profile' => $target]);
+
+        return $this->success([
+            'active_profile' => $target,
+        ]);
     }
 
     public function forgotPassword(Request $request): JsonResponse
