@@ -16,11 +16,24 @@ class Project extends Model implements HasMedia
     protected $fillable = [
         'owner_id', 'title', 'description',
         'cover_image', 'cover_color', 'status',
+        'customer_first_name', 'customer_last_name',
+        'customer_email', 'customer_phone',
+        'card_id', 'contract_id',
     ];
 
     public function owner(): BelongsTo
     {
         return $this->belongsTo(User::class, 'owner_id');
+    }
+
+    public function card(): BelongsTo
+    {
+        return $this->belongsTo(WalletAccount::class, 'card_id');
+    }
+
+    public function contract(): BelongsTo
+    {
+        return $this->belongsTo(Contract::class, 'contract_id');
     }
 
     public function vacancies(): HasMany
