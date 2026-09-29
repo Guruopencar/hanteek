@@ -1,0 +1,1 @@
+import{t as e}from"./client-D0CICYWJ.js";var t={users:(t,n=null)=>e.get(`/users/search`,{params:{query:t,...n?{role:n}:{}}})};export{t};

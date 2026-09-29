@@ -1,0 +1,1 @@
+import{t as e}from"./client-D0CICYWJ.js";var t={conversations:()=>e.get(`/conversations`),createConversation:t=>e.post(`/conversations`,t),showConversation:t=>e.get(`/conversations/${t}`),messages:(t,n)=>e.get(`/conversations/${t}/messages`,{params:n}),send:(t,n)=>e.post(`/conversations/${t}/messages`,n),markRead:t=>e.put(`/conversations/messages/${t}/read`)};export{t};

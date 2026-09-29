@@ -1,0 +1,1 @@
+import{t as e}from"./client-D0CICYWJ.js";var t={my:()=>e.get(`/reviews`),create:t=>e.post(`/reviews`,t),byUser:t=>e.get(`/reviews/user/${t}`),byContract:t=>e.get(`/reviews/contract/${t}`)};export{t};

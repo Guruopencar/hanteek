@@ -1,1 +1,0 @@
-function e(e=``){return e.split(` `).slice(0,2).map(e=>e[0]).join(``).toUpperCase()}export{e as t};

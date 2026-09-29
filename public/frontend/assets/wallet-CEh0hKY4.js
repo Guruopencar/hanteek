@@ -1,0 +1,1 @@
+import{t as e}from"./client-D0CICYWJ.js";var t={show:()=>e.get(`/wallet`),accounts:()=>e.get(`/wallet/accounts`),deposit:t=>e.post(`/wallet/deposit`,t),withdraw:t=>e.post(`/wallet/withdraw`,t),transfer:t=>e.post(`/wallet/transfer`,t),transactions:t=>e.get(`/wallet/transactions`,{params:t}),transaction:t=>e.get(`/wallet/transactions/${t}`)};export{t};

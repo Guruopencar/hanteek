@@ -1,0 +1,1 @@
+import{L as e}from"./runtime-core.esm-bundler-CfHxbUPE.js";var t=e([]);function n(){function e(e,n=`success`,r=3e3){let i=Date.now();t.value.push({id:i,message:e,type:n}),setTimeout(()=>{t.value=t.value.filter(e=>e.id!==i)},r)}return{notifications:t,success:t=>e(t,`success`),error:t=>e(t,`error`),warning:t=>e(t,`warning`),info:t=>e(t,`info`)}}export{n as t};
