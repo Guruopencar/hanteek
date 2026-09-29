@@ -1,0 +1,1 @@
+import{t as e}from"./client-D0CICYWJ.js";var t={projects:t=>e.get(`/feed/projects`,{params:t}),vacancies:t=>e.get(`/feed/vacancies`,{params:t}),resumes:t=>e.get(`/feed/resumes`,{params:t})};export{t};
