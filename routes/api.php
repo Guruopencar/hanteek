@@ -119,6 +119,7 @@ Route::prefix('v1')->group(function () {
 
         // Feed (Home стрічка)
         Route::prefix('feed')->group(function () {
+            Route::get('projects',      [FeedController::class, 'projects']);
             Route::get('vacancies',     [FeedController::class, 'vacancies']);
             Route::get('resumes',       [FeedController::class, 'resumes']);
         });

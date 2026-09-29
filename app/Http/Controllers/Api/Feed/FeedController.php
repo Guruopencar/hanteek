@@ -7,11 +7,59 @@ use App\Http\Resources\VacancyResource;
 use App\Http\Resources\ResumeResource;
 use App\Models\Vacancy;
 use App\Models\DeveloperResume;
+use App\Models\Project;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class FeedController extends ApiController
 {
+    // Стрічка проектів — усі активні проекти будь-яких власників
+    public function projects(Request $request): JsonResponse
+    {
+        $query = Project::with(['owner.profile'])
+            ->withCount('vacancies')
+            ->where('status', 'active');
+
+        if ($request->search) {
+            $query->where('title', 'like', '%' . $request->search . '%');
+        }
+        if ($request->owner_id) {
+            $query->where('owner_id', $request->owner_id);
+        }
+
+        $query->orderByDesc('created_at');
+
+        $projects = $query->paginate(
+            \App\Models\PlatformSetting::get('pagination_per_page', 12)
+        );
+
+        return response()->json([
+            'success' => true,
+            'data'    => $projects->map(fn($p) => [
+                'id'                  => $p->id,
+                'title'               => $p->title,
+                'description'         => $p->description,
+                'cover_image'         => $p->cover_image,
+                'cover_color'         => $p->cover_color,
+                'vacancies_count'     => $p->vacancies_count,
+                'customer_first_name' => $p->customer_first_name,
+                'customer_last_name'  => $p->customer_last_name,
+                'created_at'          => $p->created_at?->toISOString(),
+                'owner'               => $p->owner ? [
+                    'id'             => $p->owner->id,
+                    'full_name'      => trim(($p->owner->profile->first_name ?? '') . ' ' . ($p->owner->profile->last_name ?? '')) ?: $p->owner->name,
+                    'avatar'         => $p->owner->profile->avatar ?? null,
+                    'average_rating' => $p->owner->profile->average_rating ?? 0,
+                ] : null,
+            ]),
+            'meta' => [
+                'current_page' => $projects->currentPage(),
+                'last_page'    => $projects->lastPage(),
+                'total'        => $projects->total(),
+            ],
+        ]);
+    }
+
     // Стрічка вакансій для програміста
     public function vacancies(Request $request): JsonResponse
     {
