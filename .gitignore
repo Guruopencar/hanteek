@@ -32,3 +32,14 @@ pnpm-debug.log*
 # misc
 *.zip
 *.tar.gz
+
+# local artifacts / trash
+/Screenshot_*.png
+/error.txt
+/laravel.log
+/bash.exe.stackdump
+/copyright_*
+/gen_*.py
+/generate_copyright.php
+/hanteekf/
+/hunteek-android-handoff/
