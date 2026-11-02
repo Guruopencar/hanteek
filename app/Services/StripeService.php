@@ -135,7 +135,7 @@ class StripeService
             'type'                     => 'deposit',
             'amount'                   => $amount,
             'currency'                 => $wallet->currency,
-            'status'                   => $this->mapIntentStatus($intent->status),
+            'status'                   => 'pending',
             'payment_method'           => 'stripe',
             'stripe_payment_intent_id' => $intent->id,
             'payment_method_id'        => $pm->id,
@@ -178,7 +178,7 @@ class StripeService
         if (!$trx || $trx->status === 'completed') return;
 
         DB::transaction(function () use ($trx) {
-            $trx->update(['status' => 'completed', 'completed_at' => now()]);
+            $trx->update(['status' => 'completed', 'processed_at' => now()]);
 
             $wallet = Wallet::find($trx->to_wallet_id);
             if ($wallet) {
@@ -195,18 +195,5 @@ class StripeService
     {
         Transaction::where('stripe_payment_intent_id', $intent->id)
             ->update(['status' => 'failed']);
-    }
-
-    private function mapIntentStatus(string $status): string
-    {
-        return match ($status) {
-            'succeeded'                 => 'completed',
-            'processing'                => 'pending',
-            'requires_action',
-            'requires_confirmation',
-            'requires_payment_method'   => 'pending',
-            'canceled'                  => 'failed',
-            default                     => 'pending',
-        };
     }
 }

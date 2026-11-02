@@ -13,6 +13,7 @@ class Transaction extends Model
         'from_account_id', 'to_account_id', 'contract_id',
         'type', 'amount', 'commission', 'currency',
         'status', 'description', 'payment_method',
+        'stripe_payment_intent_id', 'payment_method_id',
         'external_id', 'meta', 'processed_at',
     ];
 
